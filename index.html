@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {background-color: rgb(128, 128, 128);}
+
+        #cords { list-style-type: none; margin: 0; padding: 0; }
+
+        video {
+        background: #222;
+            margin: 0 0 20px 0;
+            --width: 80%;
+            width: var(--width);
+            height: calc(var(--width) * 0.75);
+        }
+
+        /*#screen:-webkit-full-screen {
+        background-color: #e4708a;
+        width: 100vw;
+        height: 100vh;
+        }
+
+        #screen:-webkit-full-screen p {
+        visibility: visible;
+        }*/
+
+        #remoteScreen:-webkit-full-screen,
+        #remoteScreen:-moz-full-screen,
+        #remoteScreen:-ms-fullscreen,
+        #remoteScreen:fullscreen {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #videoTest:-webkit-full-screen,
+        #videoTest:-moz-full-screen,
+        #videoTest:-ms-fullscreen,
+        #videoTest:fullscreen {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+        }
+
+        #videoTest::-webkit-media-controls-fullscreen-button {
+            display: none;
+        }
+        #videoTest::-webkit-media-controls-play-button {display: none;}
+        #videoTest::-webkit-media-controls-timeline {display: none;}
+        #videoTest::-webkit-media-controls-current-time-display{display: none;}
+        #videoTest::-webkit-media-controls-time-remaining-display {display: none;}
+        #videoTest::-webkit-media-controls-mute-button {display: none;}
+        #videoTest::-webkit-media-controls-toggle-closed-captions-button {display: none;}
+        #videoTest::-webkit-media-controls-volume-slider {display: none;}
+        #videoTest::-webkit-media-controls { display:none !important; }
+
+    </style>
+</head>
+<body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+
+    <div id="container">
+
+        <div id="left" style="background-color: rgb(83, 117, 139); width: 25%; height: 95vh;float: left;">
+            <div id="dane">
+                <div id="screenSize">
+                    <span id="widthScreen"></span>
+                    <span id="heigthScreen"></span>
+                </div>
+            </div>
+
+            <id id="form" hidden>
+                X: <input type="text" id='x' /> <br />
+                Y: <input type="text" id='y' /> <br />
+                <button>Ustaw</button> <br />
+            </id>
+            
+            <div id="role"></div>
+            <div id="roleInfo">
+                Rola: <input type="text" id="roleData" /> <br />
+                <button id="setRole">Ustaw rolę</button>
+            </div>
+
+            <div id="danePeer">
+                <div id="showPeer" hidden></div>
+                <input id="peerID" placeholder="Peer ID" />
+                <button id="callPeer">Call Peer</button> <br />
+                <button id="sendPeerCode">Wyślij kod peer</button>
+                <div id="r"></div>
+            </div>
+
+            <ul id="cords"></ul>
+            <div id="controlScreenSize"></div>
+        </div>
+
+        <div id="right" style="width: 75%; float: left;">
+            <div id="screenShareBtn" style="cursor: pointer;" disabled hidden>Udostępnij ekran</div>
+            <!--<div id="screen" style="background-color: black; width: 800px; height:500px;"></div>-->
+            <!--<video id="screenShare" autoplay playsinline muted hidden></video>
+            <video id="screenControl" autoplay playsinline muted hidden></video>-->
+            
+            <button type="button" id="fullScreen">Pełny ekran</button> <br />
+            <div id="remoteScreen" oncontextmenu="return false;"></div>
+                
+            </div>
+            
+            <!--<video id="screenControl" autoplay playsinline muted style="visibility: hidden;">-->
+            
+        </div>
+
+        <div style="clear: both;"></div>
+
+    </div>
+
+    <script src="static/dane.js"></script>
+    <script src="socket.io/socket.io.js"></script>
+
+    <script>
+
+        var socket = io();
+        
+        var role='';
+        var run = false;
+        var isOnRemoteDiv = false;
+        var isfullScreen = false;
+        
+        var input = document.getElementById('x');
+        var input2 = document.getElementById('y');
+        var roleVal = document.getElementById('roleData');
+        //var screen = document.getElementById('screenShare');
+        var screen = document.getElementById('remoteScreen');
+
+        document.getElementById('form').addEventListener('click',function(e){
+            if(input.value && input2.value){
+                socket.emit('sendCoordsFromInputs', {x:input.value, y:input2.value});
+                input.value = '';
+                input2.value = '';
+            }
+        });
+
+        document.getElementById('setRole').addEventListener('click',function(e){
+            if(roleVal.value){
+                role=roleVal.value;
+                $('#role').html(role);
+                console.log(role);
+                run=true;
+            }
+        });
+        
+        
+
+
+        socket.on('setCoordsToDiv', function(data){
+            $('#cords').html(data.x+" "+data.y);
+        });
+
+        jQuery.fn.single_double_click = function(single_click_callback, double_click_callback, timeout) {
+            return this.each(function(){
+                var clicks = 0, self = this;
+                jQuery(this).click(function(event){
+                    clicks++;
+                    if (clicks == 1) {
+                        setTimeout(function(){
+                        if(clicks == 1) {
+                            single_click_callback.call(self, event);
+                        } else {
+                            double_click_callback.call(self, event);
+                        }
+                    clicks = 0;
+                    }, timeout || 300);
+                }
+            });
+            });
+        }
+
+        document.getElementById('remoteScreen').addEventListener('mouseup', function(event){
+            if(!screen.disabled){
+                if (event.button == 2){
+                    socket.emit('sendRightClick');
+                }
+            }
+        });
+
+        //$("#screenShare").single_double_click(function(event){
+        $("#remoteScreen").single_double_click(function(event){
+            if(!screen.disabled){
+                var posX = $(this).offset().left;
+                var posY = $(this).offset().top;
+                
+                var x = event.pageX - posX;
+                var y = event.pageY - posY;
+                //alert("1 kliknięcie "+x+" "+y);
+                //socket.emit('sendClick',{x:x,y:y});
+                if (event.button == 0){
+                    socket.emit('sendLeftClick');
+                }
+                /*else if (event.button == 1){
+                    socket.emit('sendRightClick');
+                }*/
+            }
+        },function(event){
+            if(!screen.disabled){
+                var posX = $(this).offset().left;
+                var posY = $(this).offset().top;
+                
+                var x = event.pageX - posX;
+                var y = event.pageY - posY;
+                //alert("2 kliknięcia "+x+" "+y);
+                socket.emit('sendDoubleClick',{x:x,y:y});
+            }
+        });
+
+        $(window).bind('keyup', function(e){
+            if(isOnRemoteDiv && role=='client'){
+                socket.emit('sendKey',{k:e.key});
+            }
+        });
+
+        $('#sendPeerCode').click(()=>{
+            var kod = document.getElementById('showPeer').innerHTML;
+            socket.emit('sendCode',{p:kod});
+        });
+
+        socket.on('setPeerCode', function(c){
+            document.getElementById('r').innerHTML = c.pCode;
+        });
+
+        ///////////////////////
+        ///////////////////////
+        ///////////////////////
+        ///////////////////////
+        ///////////////////////
+
+        var peer = new Peer();
+        var myStream;
+        var currentPeer;
+        var peerList = [];
+
+        peer.on('open', function(id){
+            $('#showPeer').html(id);
+        });
+
+        peer.on('call', function(call){
+            call.answer(myStream);
+            call.on('stream', function(remoteStream){
+                addRemoteVideo(remoteStream);
+            });
+        });
+        
+        function callPeer(id){
+            navigator.mediaDevices.getDisplayMedia({
+                video:{
+                    cursor: "always"
+                }
+            }).then((stream)=>{
+                myStream = stream;
+                let call = peer.call(id, stream);
+                call.on('stream', function(remoteStream){
+                    if(!peerList.includes(call.peer)){
+                        addRemoteVideo(remoteStream);
+                        currentPeer = call.peerConnection;
+                        peerList.push(call.peer);
+                    }
+                })
+            }).catch((err)=>{
+                console.log(err+" nie ma streamu");
+            });
+        }
+
+        $('#callPeer').click((e)=>{
+            let remotePeerId = document.getElementById('peerID').value;
+            $('#showPeer').html('connecting '+remotePeerId);
+            callPeer(remotePeerId);
+            var w = document.getElementById('widthScreen').innerHTML;
+            var h = document.getElementById('heigthScreen').innerHTML;
+            socket.emit('sendScreenSize', {wi:w,he:h});
+        });
+
+        function addRemoteVideo(stream){
+            let video = document.createElement('video');
+            video.srcObject = stream;
+            video.play();
+            video.setAttribute('id','videoTest')
+            document.getElementById('remoteScreen').append(video);
+
+            document.getElementById('fullScreen').addEventListener('click',()=>{
+                pelnyEkran();
+            });
+
+            $('#videoTest').mouseenter(() => {isOnRemoteDiv = true});
+            $('#videoTest').mouseleave(() => {isOnRemoteDiv = false});
+
+
+            function pelnyEkran(){
+                if(getFullscreenElement()){
+                    document.exitFullscreen();
+                    isfullScreen = false;
+                }
+                else{
+                    document.getElementById('videoTest').requestFullscreen().catch(console.log);
+                    isfullScreen = true;
+                }
+            }
+
+            function getFullscreenElement(){
+                if(document.fullscreenElement
+                    || document.webkitFullscreenElement
+                    || document.mozFullscreenElement
+                    || document.msFullscreenElement){
+                        return true;
+                    }
+                else{
+                    return false;
+                }
+            }
+
+            video.addEventListener('mousemove',function(e){
+                
+                if(isfullScreen){
+                    var width = $('#videoTest').width();
+                    var height = $('#videoTest').height();
+                    $('#controlScreenSize').html(width + " "+height);
+                    
+                    var posX = $('#videoTest').offset().left;
+                    var posY = $('#videoTest').offset().top;
+                    
+                    var x = e.pageX - posX;
+                    var y = e.pageY - posY;
+                    
+                    var str = x+" "+y;
+                    if(screen.disabled){
+                        socket.emit('sendCoords',{x:x, y:y});
+                    }
+                    if(run && role=='client'){
+                        socket.emit('sendCoordFromMouseMove',{x:x, y:y,r:role, w:width, h:height});
+                    }
+                    
+                    /*let canvas = document.getElementById('videoTest');
+                    var x=0, y=0;
+                    var element = e.target;
+                    let br =element.getBoundingClientRect();
+
+                    let ratio= window.innerHeight/canvas.height;
+                    let offset = (window.innerWidth-(canvas.width*ratio))/2;
+
+                    x = map(e.clientX-br.left-offset,0,canvas.width*ratio,0,element.width);
+                    y = map(e.clientY-br.top,0,canvas.height*ratio,0,element.height);
+
+                    socket.emit('testCords',{x:x, y:y});*/
+
+                    /*var width = $('#videoTest').width();
+                    var height = $('#videoTest').height();
+                    socket.emit('testCords', {x:width, y: height});*/
+
+                    /*var size = getElementCSSSize(this);
+                    var scaleX = this.videoWidth / size.width;
+                    var scaleY = this.videoHeight / size.height;
+
+                    var rect = this.getBoundingClientRect();  // absolute position of element
+                    var x = ((event.clientX - rect.left) * scaleX + 0.5)|0;
+                    var y = ((event.clientY - rect.top ) * scaleY + 0.5)|0;
+                    socket.emit('testCords', {x:x, y: y});*/
+                    
+                    /*var cX = e.clientX;
+                    var sX = e.screenX;
+                    var cY = e.clientY;
+                    var sY = e.screenY;
+                    var coords1 = "client - X: " + cX + ", Y coords: " + cY;
+                    var coords2 = "screen - X: " + sX + ", Y coords: " + sY;
+                    socket.emit('testCords', {x:coords1, y: coords2});*/
+
+
+
+                }
+                else{
+                    var width = $('#videoTest').width();
+                    var height = $('#videoTest').height();
+                    
+                    $('#controlScreenSize').html(width + " "+height);
+                    
+                    var posX = $('#videoTest').offset().left;
+                    var posY = $('#videoTest').offset().top;
+                    
+                    var x = e.pageX - posX;
+                    var y = e.pageY - posY;
+                    
+                    var str = x+" "+y;
+                    //$('#cords').html(str);
+                    if(screen.disabled){
+                        socket.emit('sendCoords',{x:x, y:y});
+                    }
+                    if(run && role=='client'){
+                        //socket.emit('sendCoordFromMouseMove',{x:x, y:y,r:role});
+                        socket.emit('sendCoordFromMouseMove',{x:x, y:y,r:role, w:width, h:height});
+                    }
+                }
+                
+            });
+
+
+        }
+
+        function map(v,n1,n2,m1,m2){
+            return (v-n1)/(n2-n1)*(m2-m1)+m1;
+        }
+
+        function getElementCSSSize(el) {
+            var cs = getComputedStyle(el);
+            var w = parseInt(cs.getPropertyValue("width"), 10);
+            var h = parseInt(cs.getPropertyValue("height"), 10);
+            return {width: w, height: h}
+        }
+
+    </script>
+
+    <div videoTest></div>
+
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <!--<script src="static/WebRTC.js"></script>-->
+    <script src="https://github.com/webrtc/samples/blob/gh-pages/src/js/lib/ga.js"></script>
+    <!--<script src="static/scripts.js"></script>-->
+
+</body>
+</html>
+
+
+<!-- https://youtu.be/XWL_Rzqk4CY?t=788 -->

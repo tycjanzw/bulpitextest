@@ -1,0 +1,12 @@
+html{
+    height: 100%;
+}
+
+body {
+    background-color: rgb(128, 128, 128);
+    min-height: 100%;
+}
+
+#cords { 
+    list-style-type: none; margin: 0; padding: 0; 
+}

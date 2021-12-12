@@ -1,0 +1,87 @@
+body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    padding: 0;
+    margin: 0;
+    background-color: rgb(128, 128, 128);
+  }
+  button {
+    background: transparent;
+    border: none;
+  }
+  button:hover {
+    opacity: 0.5;
+    box-shadow: 0px 0px 0px transparent;
+    border: 0px solid transparent;
+    text-shadow: 0px 0px 0px transparent;
+  }
+  #logo {
+    height: 20vh;
+    border: 1px solid red;
+  }
+  #img1 {
+    border: 1px azure solid;
+    margin-top: 2vh;
+    margin-left: 1vh;
+    height: 100px;
+    width: 86px;
+  }
+  input {
+    width: 120px;
+  }
+  #first {
+    min-width: 10%;
+    width: 30vh;
+    float: left;
+    height: 95vh;
+    background-color: rgb(20, 91, 184);
+  }
+  #second {
+    float: left;
+  
+    color: white;
+  }
+  #text {
+    font-size: 23px;
+    padding-left: 4px;
+    padding-bottom: 12px;
+  }
+  #text2 {
+    margin-top: 4vh;
+    font-size: 23px;
+    text-align: center;
+  }
+  #clear {
+    clear: both;
+  }
+  footer {
+    background-color: rgb(20, 91, 184);
+    clear: both;
+    position: relative;
+    height: 5vh;
+    margin-top: -200px;
+  }
+  #cords {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  video {
+    background: #222;
+    margin: 0 0 20px 0;
+    --width: 60%;
+    width: var(--width);
+    height: calc(var(--width) * 0.75);
+  }
+  form.form {
+    float: left;
+    font-size: 23px;
+    padding-top: 2vh;
+    width: 15vh;
+    margin-left: 5px;
+  }
+  #connection {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    background: rgb(27, 118, 236);
+  }
